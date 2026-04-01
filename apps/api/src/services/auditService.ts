@@ -11,7 +11,7 @@ export interface CreateAuditLogParams {
   tier: string;
   status: string;
   payloadHash?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: any;
   approvedByUserId?: string;
   approvedByIp?: string;
   stepUpVerified?: boolean;
@@ -117,9 +117,9 @@ export async function getAuditStats(userId: string) {
 
   return {
     totalActions,
-    byTier: Object.fromEntries(byTier.map((b) => [b.tier, b._count])),
-    byService: Object.fromEntries(byService.map((b) => [b.service, b._count])),
-    byStatus: Object.fromEntries(byStatus.map((b) => [b.status, b._count])),
+    byTier: Object.fromEntries(byTier.map((b: any) => [b.tier, b._count])),
+    byService: Object.fromEntries(byService.map((b: any) => [b.service, b._count])),
+    byStatus: Object.fromEntries(byStatus.map((b: any) => [b.status, b._count])),
     last7DaysTrend: (last7Days || []).map((d: any) => ({
       date: d.date?.toISOString?.() ?? d.date,
       count: d.count,

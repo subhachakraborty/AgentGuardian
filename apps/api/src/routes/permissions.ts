@@ -29,7 +29,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
     for (const service of services) {
       const actions = SERVICE_ACTIONS[service] || [];
       for (const actionType of actions) {
-        const customConfig = configs.find((c) => c.service === service && c.actionType === actionType);
+        const customConfig = configs.find((c: any) => c.service === service && c.actionType === actionType);
         const defaultTier = DEFAULT_TIER_MAP[service]?.[actionType] || 'STEP_UP';
 
         allPermissions.push({
@@ -147,7 +147,7 @@ router.put('/:service/:action', requireAuth, async (req: Request, res: Response)
 router.get('/defaults', requireAuth, (_req: Request, res: Response) => {
   const defaults: any[] = [];
   for (const [service, actions] of Object.entries(DEFAULT_TIER_MAP)) {
-    for (const [actionType, tier] of Object.entries(actions)) {
+    for (const [actionType, tier] of Object.entries(actions as Record<string, string>)) {
       defaults.push({
         service,
         actionType,

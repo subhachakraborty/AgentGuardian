@@ -22,14 +22,14 @@ export async function executeGithubAction(
     case 'github.read_issues': {
       const res = await fetch(`${GITHUB_API}/repos/${owner}/${repo}/issues?state=open&per_page=20`, { headers });
       if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
-      const data = await res.json();
+      const data: any = await res.json();
       return { success: true, data, metadata: { issueCount: data.length } };
     }
 
     case 'github.read_prs': {
       const res = await fetch(`${GITHUB_API}/repos/${owner}/${repo}/pulls?state=open&per_page=20`, { headers });
       if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
-      const data = await res.json();
+      const data: any = await res.json();
       return { success: true, data, metadata: { prCount: data.length } };
     }
 
@@ -47,7 +47,7 @@ export async function executeGithubAction(
         body: JSON.stringify({ title: payload?.title, body: payload?.body, labels: payload?.labels }),
       });
       if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
-      const data = await res.json();
+      const data: any = await res.json();
       return { success: true, data, metadata: { issueNumber: data.number } };
     }
 
@@ -73,7 +73,7 @@ export async function executeGithubAction(
         }),
       });
       if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
-      const data = await res.json();
+      const data: any = await res.json();
       return { success: true, data, metadata: { prNumber: data.number } };
     }
 

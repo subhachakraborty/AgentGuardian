@@ -26,7 +26,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
     // Include all supported services (even unconnected ones)
     const allServices = ['GMAIL', 'GITHUB', 'SLACK', 'NOTION'];
     const result = allServices.map((service) => {
-      const conn = connections.find((c) => c.service === service);
+      const conn = connections.find((c: any) => c.service === service);
       return {
         service,
         status: conn?.status || 'NOT_CONNECTED',
