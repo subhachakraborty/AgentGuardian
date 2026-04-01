@@ -23,9 +23,25 @@ const actionIntentSchema = z.object({
 });
 
 // POST /api/v1/agent/action — Primary action endpoint
+function requireAgentOrDashboard(req: Request, res: Response, next: import('express').NextFunction) {
+  const payload = (req as any).auth?.payload;
+  const scopes = ((payload?.scope as string) ?? '').split(' ');
+  
+  if (scopes.includes('agent:act')) {
+    // M2M agent token path - use requireAgentAuth
+    return requireAgentAuth(req, res, next);
+  }
+  
+  // Human dashboard path - set acting user ID from sub claim
+  (req as any).actingUserId = payload?.sub;
+  (req as any).agentId = 'dashboard';
+  next();
+}
+
 router.post(
   '/action',
   requireAuth,
+  requireAgentOrDashboard,
   agentActionLimiter,
   async (req: Request, res: Response) => {
     try {

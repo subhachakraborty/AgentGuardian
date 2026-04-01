@@ -146,6 +146,7 @@ enum AuditStatus {
   EXPIRED
   FAILED
   STEP_UP_VERIFIED
+  PENDING
 }
 
 enum PendingStatus {

@@ -37,7 +37,7 @@ export async function executeGithubAction(
       const path = (payload?.path as string) || 'README.md';
       const res = await fetch(`${GITHUB_API}/repos/${owner}/${repo}/contents/${path}`, { headers });
       if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
-      const data = await res.json();
+      const data: any = await res.json();
       return { success: true, data, metadata: { filePath: path } };
     }
 
@@ -58,7 +58,7 @@ export async function executeGithubAction(
         body: JSON.stringify({ body: payload?.body }),
       });
       if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
-      const data = await res.json();
+      const data: any = await res.json();
       return { success: true, data, metadata: { issueNumber } };
     }
 
@@ -85,7 +85,7 @@ export async function executeGithubAction(
         body: JSON.stringify({ merge_method: payload?.mergeMethod || 'merge' }),
       });
       if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
-      const data = await res.json();
+      const data: any = await res.json();
       return { success: true, data, metadata: { prNumber, merged: true } };
     }
 
@@ -105,7 +105,7 @@ export async function executeGithubAction(
         body: JSON.stringify({ state: 'closed' }),
       });
       if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
-      const data = await res.json();
+      const data: any = await res.json();
       return { success: true, data, metadata: { issueNumber, closed: true } };
     }
 

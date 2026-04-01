@@ -9,6 +9,8 @@ export const requireAuth = auth({
   audience: env.AUTH0_AUDIENCE,
   issuerBaseURL: `https://${env.AUTH0_DOMAIN}`,
   tokenSigningAlg: 'RS256',
+  jwksUri: `https://${env.AUTH0_DOMAIN}/.well-known/jwks.json`,
+  cacheMaxAge: 5 * 60 * 1000,
 });
 
 // Scope guard — returns 403, never 401

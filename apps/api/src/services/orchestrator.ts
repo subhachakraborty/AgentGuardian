@@ -155,7 +155,7 @@ async function handleNudgeTier(
     userId, agentId,
     service: service.toUpperCase(),
     actionType, tier: 'NUDGE',
-    status: 'APPROVED', // Will be updated when resolved
+    status: 'PENDING', // Will be updated when resolved
     payloadHash,
     metadata: { displaySummary },
   });
@@ -231,13 +231,20 @@ export async function executeApprovedAction(
     const service = pending.service.toLowerCase() as any;
     const token = await getServiceToken(pending.userId, service);
 
-    // Execute the action
-    // Note: payload is not stored; in production you'd store it encrypted or in Redis
+    // Retrieve payload from Redis
+    const { redis } = await import('../lib/redis');
+    const rawPayload = await redis.get(`nudge:payload:${pendingActionId}`);
+    const reconstructedPayload = rawPayload ? JSON.parse(rawPayload) : {};
+
+    // Clean up Redis key after retrieval
+    await redis.del(`nudge:payload:${pendingActionId}`);
+
+    // Execute the action with actual payload
     const result = await executeServiceAction(
       service,
       pending.actionType,
       token,
-      {} // Payload would be fetched from secure storage
+      reconstructedPayload
     );
 
     // Create audit log

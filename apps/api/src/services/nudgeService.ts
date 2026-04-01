@@ -36,6 +36,17 @@ export async function createNudgeAction(params: CreateNudgeParams) {
     },
   });
 
+  // Store payload in Redis with 70s TTL (60s veto window + buffer)
+  if (params.payload && Object.keys(params.payload).length > 0) {
+    import('../lib/redis').then(({ redis }) => {
+      redis.setex(
+        `nudge:payload:${pendingAction.id}`,
+        70,
+        JSON.stringify(params.payload)
+      ).catch((err: any) => logger.error('Failed to cache nudge payload in Redis', { error: err.message }));
+    });
+  }
+
   // Create BullMQ job with delayed processing (waits for approval or expiry)
   const job = await nudgeQueue.add(
     'nudge-timeout',

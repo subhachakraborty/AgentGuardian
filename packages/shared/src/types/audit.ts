@@ -8,6 +8,7 @@ export enum AuditStatus {
   EXPIRED = 'EXPIRED',
   FAILED = 'FAILED',
   STEP_UP_VERIFIED = 'STEP_UP_VERIFIED',
+  PENDING = 'PENDING',
 }
 
 // ─── Pending Action Statuses ────────────────────────────

@@ -4,6 +4,7 @@ import { requireAuth, getUserId } from '../middleware/auth';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
 import { env } from '../config/env';
+import { auth0Management } from '../config/auth0';
 import { emitConnectionRevoked } from '../services/notificationService';
 import { SERVICE_CONNECTION_MAP } from '@agent-guardian/shared';
 
@@ -128,8 +129,33 @@ router.delete('/:service', requireAuth, async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'no_active_connection', message: `No active ${service} connection found.` });
     }
 
-    // TODO: Call Auth0 Token Vault revocation API
-    // await auth0Management.tokenVault.revokeToken({ userId: auth0UserId, connection: connectionName });
+    // Revoke from Auth0 Token Vault
+    const connectionProviderMap: Record<string, string> = {
+      GMAIL: 'google-oauth2',
+      GITHUB: 'github',
+      SLACK: 'slack',
+      NOTION: 'notion',
+    };
+    
+    try {
+      const provider = connectionProviderMap[service.toUpperCase()];
+      if (provider) {
+        const auth0User = await auth0Management.users.get({ id: auth0UserId });
+        if (auth0User.data && auth0User.data.identities) {
+          const identityToUnlink = auth0User.data.identities.find(i => i.provider === provider);
+          if (identityToUnlink) {
+            await auth0Management.users.unlinkIdentity({ 
+              id: auth0UserId, 
+              provider, 
+              user_id: identityToUnlink.user_id 
+            });
+            logger.info('Auth0 Token Vault connection revoked', { auth0UserId, service });
+          }
+        }
+      }
+    } catch (err: any) {
+      logger.warn('Failed to revoke Auth0 Token Vault connection', { error: err.message, service });
+    }
 
     // Emit real-time update
     emitConnectionRevoked(auth0UserId, service.toUpperCase());
