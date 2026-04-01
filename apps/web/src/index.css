@@ -1,0 +1,141 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Global Styles ──────────────────────────────────── */
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-surface text-text-primary;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-300 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-400;
+  }
+}
+
+@layer components {
+  /* ─── Card ──────────────────────────────────────────── */
+  .card {
+    @apply bg-card rounded-xl border border-border shadow-sm
+           transition-all duration-200 hover:shadow-md;
+  }
+
+  /* ─── Tier Badges ───────────────────────────────────── */
+  .badge-auto {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold
+           bg-emerald-50 text-emerald-700 border border-emerald-200;
+  }
+  .badge-nudge {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold
+           bg-amber-50 text-amber-700 border border-amber-200;
+  }
+  .badge-stepup {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold
+           bg-red-50 text-red-700 border border-red-200;
+  }
+
+  /* ─── Status Badges ─────────────────────────────────── */
+  .badge-executed {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium
+           bg-emerald-100 text-emerald-800;
+  }
+  .badge-approved {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium
+           bg-blue-100 text-blue-800;
+  }
+  .badge-denied {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium
+           bg-red-100 text-red-800;
+  }
+  .badge-expired {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium
+           bg-gray-100 text-gray-600;
+  }
+  .badge-pending {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium
+           bg-amber-100 text-amber-800 animate-pulse-slow;
+  }
+
+  /* ─── Buttons ───────────────────────────────────────── */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg
+           font-medium text-sm transition-all duration-150
+           focus:outline-none focus:ring-2 focus:ring-offset-2
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-brand text-white hover:bg-brand-light
+           focus:ring-brand shadow-sm hover:shadow;
+  }
+  .btn-approve {
+    @apply btn bg-emerald-600 text-white hover:bg-emerald-700
+           focus:ring-emerald-500 shadow-sm;
+  }
+  .btn-deny {
+    @apply btn bg-white text-red-600 border border-red-300
+           hover:bg-red-50 focus:ring-red-500;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent text-text-muted hover:bg-slate-100
+           focus:ring-slate-400;
+  }
+  .btn-danger {
+    @apply btn bg-red-600 text-white hover:bg-red-700
+           focus:ring-red-500 shadow-sm;
+  }
+
+  /* ─── Nudge Alert Card ──────────────────────────────── */
+  .nudge-card {
+    @apply card border-l-4 border-l-tier-nudge p-4
+           animate-slide-in bg-amber-50/50;
+  }
+
+  /* ─── Step-Up Modal Overlay ─────────────────────────── */
+  .stepup-overlay {
+    @apply fixed inset-0 z-50 flex items-center justify-center
+           bg-black/60 backdrop-blur-sm;
+  }
+  .stepup-modal {
+    @apply bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-8
+           border-t-4 border-t-tier-stepup animate-slide-in;
+  }
+
+  /* ─── Service Icons ─────────────────────────────────── */
+  .service-icon {
+    @apply w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm;
+  }
+  .service-gmail { @apply bg-red-500; }
+  .service-github { @apply bg-gray-800; }
+  .service-slack { @apply bg-purple-600; }
+  .service-notion { @apply bg-gray-900; }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-white/80 backdrop-blur-lg border border-white/20;
+  }
+
+  .gradient-brand {
+    background: linear-gradient(135deg, #1A3C5E 0%, #2E86AB 100%);
+  }
+
+  .gradient-sidebar {
+    background: linear-gradient(180deg, #0F2640 0%, #1A3C5E 50%, #1E4D6E 100%);
+  }
+}

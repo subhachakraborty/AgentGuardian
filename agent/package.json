@@ -1,0 +1,16 @@
+{
+  "name": "@agent-guardian/agent",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts"
+  },
+  "dependencies": {
+    "@agent-guardian/shared": "*"
+  },
+  "devDependencies": {
+    "tsx": "^4.11.0",
+    "typescript": "^5.4.5"
+  }
+}

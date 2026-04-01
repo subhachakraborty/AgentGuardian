@@ -1,0 +1,156 @@
+// prisma/schema.prisma
+// Agent Guardian — Full Database Schema (v1.1 with critical patches)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── User ───────────────────────────────────────────────
+model User {
+  id              String   @id @default(uuid())
+  auth0UserId     String   @unique  // Auth0 sub claim
+  email           String   @unique
+  displayName     String?
+  avatarUrl       String?
+  pushSubscription Json?   // Web Push subscription object
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  connections     ServiceConnection[]
+  permConfigs     PermissionConfig[]
+  auditLogs       AuditLog[]
+  pendingActions  PendingAction[]
+}
+
+// ─── ServiceConnection ──────────────────────────────────
+// Note: OAuth tokens are NEVER stored here.
+// Token Vault (Auth0) holds all credentials.
+model ServiceConnection {
+  id              String           @id @default(uuid())
+  userId          String
+  service         ServiceType      // GMAIL | GITHUB | SLACK | NOTION
+  status          ConnectionStatus @default(ACTIVE)
+  connectedAt     DateTime         @default(now())
+  lastUsedAt      DateTime?
+  revokedAt       DateTime?
+
+  user            User             @relation(fields: [userId], references: [id])
+  auditLogs       AuditLog[]
+
+  @@unique([userId, service])
+  @@index([userId])
+}
+
+// ─── PermissionConfig ────────────────────────────────────
+// One row per (user, service, actionType) triple.
+model PermissionConfig {
+  id              String      @id @default(uuid())
+  userId          String
+  service         ServiceType
+  actionType      String      // e.g. 'gmail.send', 'github.merge_pr'
+  tier            ActionTier  // AUTO | NUDGE | STEP_UP
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  user            User        @relation(fields: [userId], references: [id])
+
+  @@unique([userId, service, actionType])
+  @@index([userId, service])
+}
+
+// ─── AuditLog ────────────────────────────────────────────
+// Immutable — rows are never updated or deleted.
+model AuditLog {
+  id               String       @id @default(uuid())
+  userId           String
+  agentId          String?      // Which agent process triggered this
+  connectionId     String?
+  service          ServiceType
+  actionType       String
+  tier             ActionTier
+  status           AuditStatus  // EXECUTED | APPROVED | DENIED | EXPIRED | FAILED | STEP_UP_VERIFIED
+  payloadHash      String?      // SHA-256 of the action payload
+  metadata         Json?        // Non-sensitive context
+
+  // Accountability fields (v1.1 patch)
+  approvedByUserId String?      // Who approved (for NUDGE/STEP_UP tiers)
+  approvedByIp     String?      // IP of approver
+  stepUpVerified   Boolean      @default(false)
+  executedAt       DateTime     @default(now())
+
+  user             User               @relation(fields: [userId], references: [id])
+  connection       ServiceConnection? @relation(fields: [connectionId], references: [id])
+
+  @@index([userId, executedAt])
+  @@index([userId, service])
+  @@index([agentId])
+}
+
+// ─── PendingAction ───────────────────────────────────────
+// Tracks NUDGE and STEP_UP actions awaiting user decision.
+model PendingAction {
+  id               String        @id @default(uuid())
+  userId           String
+  agentId          String        // Auth0 M2M client ID of the agent
+  service          ServiceType
+  actionType       String
+  tier             ActionTier
+  status           PendingStatus @default(PENDING_APPROVAL)
+  payloadHash      String
+  displaySummary   String        // Human-readable description
+  bullJobId        String?       // BullMQ job ID
+  expiresAt        DateTime
+  createdAt        DateTime      @default(now())
+
+  // Resolution fields (v1.1 patch)
+  resolvedAt       DateTime?
+  resolvedByUserId String?       // Auth0 sub of the human who approved/denied
+  resolvedByIp     String?       // IP address at time of resolution
+  resolvedByDevice String?       // User-Agent string at time of resolution
+  stepUpVerified   Boolean       @default(false)
+
+  user             User          @relation(fields: [userId], references: [id])
+
+  @@index([userId, status])
+  @@index([expiresAt])
+}
+
+// ─── Enums ───────────────────────────────────────────────
+enum ServiceType {
+  GMAIL
+  GITHUB
+  SLACK
+  NOTION
+}
+
+enum ActionTier {
+  AUTO
+  NUDGE
+  STEP_UP
+}
+
+enum ConnectionStatus {
+  ACTIVE
+  REVOKED
+}
+
+enum AuditStatus {
+  EXECUTED
+  APPROVED
+  DENIED
+  EXPIRED
+  FAILED
+  STEP_UP_VERIFIED
+}
+
+enum PendingStatus {
+  PENDING_APPROVAL
+  APPROVED
+  DENIED
+  EXPIRED
+}

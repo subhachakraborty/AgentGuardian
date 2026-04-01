@@ -1,0 +1,41 @@
+// src/middleware/auth.ts — WITH JWKS CACHING (Section 16.2 + 16.3)
+import { auth } from 'express-oauth2-jwt-bearer';
+import { Request, Response, NextFunction } from 'express';
+import { env } from '../config/env';
+
+// JWT verification middleware — returns 401 only for missing/invalid/expired tokens
+// Does NOT check scopes — scope checks return 403 separately
+export const requireAuth = auth({
+  audience: env.AUTH0_AUDIENCE,
+  issuerBaseURL: `https://${env.AUTH0_DOMAIN}`,
+  tokenSigningAlg: 'RS256',
+});
+
+// Scope guard — returns 403, never 401
+export function requireScope(scope: string) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const payload = (req as any).auth?.payload;
+    const scopes = ((payload?.scope as string) ?? '').split(' ');
+
+    if (!scopes.includes(scope)) {
+      return res.status(403).json({
+        error: 'insufficient_scope',
+        message: `Required scope '${scope}' not present in token.`,
+      });
+    }
+    next();
+  };
+}
+
+// Tier policy denial — also 403
+export function tierDenied(res: Response, reason: string) {
+  return res.status(403).json({
+    error: 'action_denied',
+    message: reason,
+  });
+}
+
+// Extract user ID from JWT payload (human user token)
+export function getUserId(req: Request): string | undefined {
+  return (req as any).auth?.payload?.sub as string | undefined;
+}
