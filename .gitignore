@@ -37,4 +37,6 @@ coverage/
 pgdata/
 redisdata/
 
+#Others
 *.md
+!README.md
