@@ -3,8 +3,11 @@ import { StatsBar } from '../components/dashboard/StatsBar';
 import { NudgeAlert } from '../components/dashboard/NudgeAlert';
 import { ActivityFeed } from '../components/dashboard/ActivityFeed';
 import { StepUpModal } from '../components/dashboard/StepUpModal';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 
 export function Dashboard() {
+  usePushNotifications();
+
   return (
     <>
       <TopNav title="Dashboard" subtitle="Real-time overview of all agent activity" />

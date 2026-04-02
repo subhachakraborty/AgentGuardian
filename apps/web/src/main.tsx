@@ -16,7 +16,7 @@ const queryClient = new QueryClient({
   },
 });
 
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
+if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch((error: any) => {
       console.error('ServiceWorker registration failed:', error);
