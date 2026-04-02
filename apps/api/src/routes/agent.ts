@@ -94,10 +94,21 @@ router.post(
 router.get('/action/:jobId/status', requireAuth, async (req: Request, res: Response) => {
   try {
     const { jobId } = req.params;
+    const auth0UserId = (req as any).auth?.payload?.sub as string;
+
+    const user = await prisma.user.findUnique({ where: { auth0UserId } });
+    if (!user) {
+      return res.status(401).json({ error: 'unauthorized', message: 'User not found' });
+    }
+
     const pending = await getPendingAction(jobId);
 
     if (!pending) {
       return res.status(404).json({ error: 'not_found', message: 'Action not found' });
+    }
+
+    if (pending.userId !== user.id) {
+      return res.status(403).json({ error: 'forbidden', message: 'Not authorized to view this action' });
     }
 
     // Check if expired
@@ -125,23 +136,28 @@ router.get('/action/:jobId/status', requireAuth, async (req: Request, res: Respo
 router.post('/action/:jobId/approve', requireAuth, async (req: Request, res: Response) => {
   try {
     const { jobId } = req.params;
-    const resolvingUserId = (req as any).auth?.payload?.sub as string;
+    const auth0UserId = (req as any).auth?.payload?.sub as string;
     const resolvingIp = req.ip ?? (req.socket?.remoteAddress) ?? 'unknown';
     const resolvingDevice = req.headers['user-agent'] ?? 'unknown';
 
+    const user = await prisma.user.findUnique({ where: { auth0UserId } });
+    if (!user) {
+      return res.status(401).json({ error: 'unauthorized', message: 'User not found' });
+    }
+
     // Approve the pending action
-    const updated = await approveNudgeAction(jobId, resolvingUserId, resolvingIp, resolvingDevice);
+    const updated = await approveNudgeAction(jobId, user.id, resolvingIp, resolvingDevice);
 
     // Execute the approved action
     const execResult = await executeApprovedAction(
       jobId,
-      resolvingUserId,
+      user.id,
       resolvingIp,
       false
     );
 
     // Emit resolution to dashboard
-    emitNudgeResolved(updated.userId, jobId, 'APPROVED', resolvingUserId);
+    emitNudgeResolved(updated.userId, jobId, 'APPROVED', user.id);
 
     res.json({ status: 'APPROVED', jobId, execution: execResult });
   } catch (err: any) {
@@ -154,11 +170,16 @@ router.post('/action/:jobId/approve', requireAuth, async (req: Request, res: Res
 router.post('/action/:jobId/deny', requireAuth, async (req: Request, res: Response) => {
   try {
     const { jobId } = req.params;
-    const resolvingUserId = (req as any).auth?.payload?.sub as string;
+    const auth0UserId = (req as any).auth?.payload?.sub as string;
     const resolvingIp = req.ip ?? (req.socket?.remoteAddress) ?? 'unknown';
     const resolvingDevice = req.headers['user-agent'] ?? 'unknown';
 
-    const updated = await denyNudgeAction(jobId, resolvingUserId, resolvingIp, resolvingDevice);
+    const user = await prisma.user.findUnique({ where: { auth0UserId } });
+    if (!user) {
+      return res.status(401).json({ error: 'unauthorized', message: 'User not found' });
+    }
+
+    const updated = await denyNudgeAction(jobId, user.id, resolvingIp, resolvingDevice);
 
     // Create audit log for denial
     await createAuditLog({
@@ -169,11 +190,11 @@ router.post('/action/:jobId/deny', requireAuth, async (req: Request, res: Respon
       tier: updated.tier,
       status: 'DENIED',
       payloadHash: updated.payloadHash,
-      approvedByUserId: resolvingUserId,
+      approvedByUserId: user.id,
       approvedByIp: resolvingIp,
     });
 
-    emitNudgeResolved(updated.userId, jobId, 'DENIED', resolvingUserId);
+    emitNudgeResolved(updated.userId, jobId, 'DENIED', user.id);
 
     res.json({ status: 'DENIED', jobId });
   } catch (err: any) {
@@ -190,8 +211,22 @@ router.post(
   async (req: Request, res: Response) => {
     try {
       const { jobId } = req.params;
-      const resolvingUserId = (req as any).auth?.payload?.sub as string;
+      const auth0UserId = (req as any).auth?.payload?.sub as string;
       const resolvingIp = req.ip ?? (req.socket?.remoteAddress) ?? 'unknown';
+
+      const user = await prisma.user.findUnique({ where: { auth0UserId } });
+      if (!user) {
+        return res.status(401).json({ error: 'unauthorized', message: 'User not found' });
+      }
+
+      const pending = await prisma.pendingAction.findUnique({ where: { id: jobId } });
+      if (!pending) {
+        return res.status(404).json({ error: 'not_found', message: 'Action not found' });
+      }
+
+      if (pending.userId !== user.id) {
+        return res.status(403).json({ error: 'forbidden', message: 'Not authorized to step-up this action' });
+      }
 
       // Update pending action
       await prisma.pendingAction.update({
@@ -199,7 +234,7 @@ router.post(
         data: {
           status: 'APPROVED',
           resolvedAt: new Date(),
-          resolvedByUserId: resolvingUserId,
+          resolvedByUserId: user.id,
           resolvedByIp: resolvingIp,
           stepUpVerified: true,
         },
@@ -208,7 +243,7 @@ router.post(
       // Execute with step-up verification
       const execResult = await executeApprovedAction(
         jobId,
-        resolvingUserId,
+        user.id,
         resolvingIp,
         true // stepUpVerified
       );

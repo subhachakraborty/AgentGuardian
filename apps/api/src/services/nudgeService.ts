@@ -2,6 +2,7 @@
 import { prisma } from '../lib/prisma';
 import { nudgeQueue } from '../lib/queue';
 import { logger } from '../lib/logger';
+import { redis } from '../lib/redis';
 import { NUDGE_TIMEOUT_MS } from '@agent-guardian/shared';
 import crypto from 'crypto';
 
@@ -38,13 +39,11 @@ export async function createNudgeAction(params: CreateNudgeParams) {
 
   // Store payload in Redis with 70s TTL (60s veto window + buffer)
   if (params.payload && Object.keys(params.payload).length > 0) {
-    import('../lib/redis').then(({ redis }) => {
-      redis.setex(
-        `nudge:payload:${pendingAction.id}`,
-        70,
-        JSON.stringify(params.payload)
-      ).catch((err: any) => logger.error('Failed to cache nudge payload in Redis', { error: err.message }));
-    });
+    await redis.setex(
+      `nudge:payload:${pendingAction.id}`,
+      70,
+      JSON.stringify(params.payload)
+    );
   }
 
   // Create BullMQ job with delayed processing (waits for approval or expiry)
@@ -93,6 +92,10 @@ export async function approveNudgeAction(
     throw new Error('Pending action not found');
   }
 
+  if (pendingAction.userId !== resolvedByUserId) {
+    throw new Error('Not authorized to approve this action');
+  }
+
   if (pendingAction.status !== 'PENDING_APPROVAL') {
     throw new Error(`Action already resolved: ${pendingAction.status}`);
   }
@@ -139,6 +142,10 @@ export async function denyNudgeAction(
 
   if (!pendingAction) {
     throw new Error('Pending action not found');
+  }
+
+  if (pendingAction.userId !== resolvedByUserId) {
+    throw new Error('Not authorized to deny this action');
   }
 
   if (pendingAction.status !== 'PENDING_APPROVAL') {

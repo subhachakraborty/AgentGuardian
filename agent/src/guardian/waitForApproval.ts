@@ -24,8 +24,6 @@ export async function waitForApproval(
   let backoff = intervalMs;
 
   while (Date.now() < deadline) {
-    await sleep(backoff);
-
     const resp = await fetch(
       `${process.env.GUARDIAN_API_URL}/api/v1/agent/action/${jobId}/status`,
       { headers: { Authorization: `Bearer ${agentToken}` } }
@@ -41,8 +39,13 @@ export async function waitForApproval(
       return data; // Terminal state — stop polling
     }
 
-    // Exponential backoff: 3s → 5s → 8s → cap at 10s
-    backoff = Math.min(backoff * 1.5, 10_000);
+    if (Date.now() + backoff < deadline) {
+      await sleep(backoff);
+      // Exponential backoff: 3s → 5s → 8s → cap at 10s
+      backoff = Math.min(backoff * 1.5, 10_000);
+    } else {
+      break;
+    }
   }
 
   return { status: 'EXPIRED', error: 'Client-side timeout exceeded' };

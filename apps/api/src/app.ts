@@ -9,6 +9,7 @@ import { generalLimiter } from './middleware/rateLimit';
 
 // Route imports
 import authRoutes from './routes/auth';
+import healthRouter from './routes/health';
 import connectionRoutes from './routes/connections';
 import permissionRoutes from './routes/permissions';
 import agentRoutes from './routes/agent';
@@ -33,7 +34,7 @@ app.set('trust proxy', 1);
 
 // ─── Routes ─────────────────────────────────────────────
 // Health check (no auth prefix)
-app.use('/api/v1', authRoutes);
+app.use('/api/v1', healthRouter);
 
 // Authenticated routes
 app.use('/api/v1/auth', authRoutes);

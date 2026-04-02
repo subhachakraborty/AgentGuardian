@@ -6,11 +6,6 @@ import { logger } from '../lib/logger';
 
 const router = Router();
 
-// GET /api/v1/health — Health check (no auth)
-router.get('/health', (_req: Request, res: Response) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString(), service: 'agent-guardian-api' });
-});
-
 // GET /api/v1/auth/me — Get current user profile
 router.get('/me', requireAuth, async (req: Request, res: Response) => {
   try {

@@ -8,6 +8,7 @@ import { executeServiceAction } from './executors';
 import { ActionTier } from '@agent-guardian/shared';
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
+import { redis } from '../lib/redis';
 import crypto from 'crypto';
 import { env } from '../config/env';
 
@@ -117,6 +118,16 @@ async function handleAutoTier(
         metadata: { error: err.message },
       });
       return { tier: 'AUTO', status: 'FAILED', error: err.message, auditLogId: auditLog.id };
+    } else if (err instanceof TokenExpiredError) {
+      const auditLog = await createAuditLog({
+        userId, agentId,
+        service: service.toUpperCase(),
+        actionType, tier: 'AUTO',
+        status: 'FAILED',
+        payloadHash,
+        metadata: { error: err.message, requiresReconnect: true },
+      });
+      return { tier: 'AUTO', status: 'FAILED', error: err.message, auditLogId: auditLog.id };
     }
     throw err;
   }
@@ -194,6 +205,7 @@ async function handleStepUpTier(
   // Generate challenge URL
   const challengeUrl = `https://${env.AUTH0_DOMAIN}/authorize?` +
     `audience=${encodeURIComponent(env.AUTH0_AUDIENCE)}&` +
+    `client_id=${encodeURIComponent(env.AUTH0_CLIENT_ID)}&` +
     `scope=openid&` +
     `acr_values=${encodeURIComponent('http://schemas.openid.net/pape/policies/2007/06/multi-factor')}&` +
     `response_type=code&` +
@@ -226,13 +238,18 @@ export async function executeApprovedAction(
     throw new Error('Pending action not found');
   }
 
+  const lockKey = `exec:lock:${pendingActionId}`;
+  const lock = await redis.set(lockKey, '1', 'EX', 30, 'NX');
+  if (!lock) {
+    throw new Error('Action execution already in progress');
+  }
+
   try {
     // Fetch token from Token Vault
     const service = pending.service.toLowerCase() as any;
     const token = await getServiceToken(pending.userId, service);
 
     // Retrieve payload from Redis
-    const { redis } = await import('../lib/redis');
     const rawPayload = await redis.get(`nudge:payload:${pendingActionId}`);
     const reconstructedPayload = rawPayload ? JSON.parse(rawPayload) : {};
 
@@ -289,5 +306,13 @@ export async function executeApprovedAction(
       error: err.message,
       auditLogId: auditLog.id,
     };
+  } finally {
+    if (lock) {
+      try {
+        await redis.del(lockKey);
+      } catch (err: any) {
+        logger.error('Failed to release execution lock', { error: err.message, pendingActionId });
+      }
+    }
   }
 }

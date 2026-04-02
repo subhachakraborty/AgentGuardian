@@ -35,6 +35,14 @@ export async function getAgentToken(): Promise<string> {
   }
 
   const data = await response.json();
+
+  if (!data.access_token || typeof data.access_token !== 'string') {
+    throw new Error('Auth0 returned an invalid token response: missing access_token');
+  }
+  if (typeof data.expires_in !== 'number' || data.expires_in <= 0) {
+    throw new Error('Auth0 returned an invalid token response: missing expires_in');
+  }
+
   cache = {
     token: data.access_token,
     expiresAt: now + data.expires_in * 1000,
