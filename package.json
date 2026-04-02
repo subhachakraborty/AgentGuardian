@@ -15,7 +15,7 @@
     "build": "npm run build -w packages/shared && npm run build -w apps/api && npm run build -w apps/web",
     "type-check": "npm run build -w packages/shared && tsc --noEmit -p apps/api/tsconfig.json && tsc --noEmit -p apps/web/tsconfig.json",
     "lint": "eslint . --ext .ts,.tsx",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "db:migrate": "npm run db:migrate -w apps/api",
     "db:seed": "npm run db:seed -w apps/api",
     "db:studio": "npm run db:studio -w apps/api",
@@ -23,10 +23,11 @@
     "docker:down": "docker-compose down"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2",
-    "typescript": "^5.4.5",
-    "eslint": "^8.57.0",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
-    "@typescript-eslint/parser": "^7.0.0"
+    "@typescript-eslint/parser": "^7.0.0",
+    "concurrently": "^8.2.2",
+    "eslint": "^8.57.0",
+    "typescript": "^5.4.5",
+    "vitest": "^4.1.2"
   }
 }
