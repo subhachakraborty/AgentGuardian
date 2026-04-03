@@ -202,6 +202,14 @@ async function handleStepUpTier(
     },
   });
 
+  if (payload && Object.keys(payload).length > 0) {
+    await redis.setex(
+      `nudge:payload:${pendingAction.id}`,
+      360, // 5-min MFA window (300s) + 60s buffer
+      JSON.stringify(payload)
+    );
+  }
+
   // Generate challenge URL
   const challengeUrl = `https://${env.AUTH0_DOMAIN}/authorize?` +
     `audience=${encodeURIComponent(env.AUTH0_AUDIENCE)}&` +

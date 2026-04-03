@@ -91,12 +91,16 @@ router.post(
 );
 
 // GET /api/v1/agent/action/:jobId/status — Poll action status
-router.get('/action/:jobId/status', requireAuth, async (req: Request, res: Response) => {
+router.get(
+  '/action/:jobId/status',
+  requireAuth,
+  requireAgentOrDashboard,
+  async (req: Request, res: Response) => {
   try {
     const { jobId } = req.params;
-    const auth0UserId = (req as any).auth?.payload?.sub as string;
+    const actingAuth0UserId = getActingUserId(req);
 
-    const user = await prisma.user.findUnique({ where: { auth0UserId } });
+    const user = await prisma.user.findUnique({ where: { auth0UserId: actingAuth0UserId } });
     if (!user) {
       return res.status(401).json({ error: 'unauthorized', message: 'User not found' });
     }
