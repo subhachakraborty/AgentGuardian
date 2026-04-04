@@ -103,7 +103,7 @@ async function runDemoTask() {
 
 
   console.log('\n🔒 Step 4: Closing weekly review GitHub issue...');
-  const readPrs = await submitAction(token, {
+  const closeIssue = await submitAction(token, {
     service: 'github',
     actionType: 'github.close_issue',
     payload: { owner: 'my-org', repo: 'tasks', issueNumber: 42 },
