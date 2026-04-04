@@ -1,7 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useEffect } from 'react';
-import { setTokenGetter } from './api/client';
+import { setTokenGetter, apiClient } from './api/client';
 import { Sidebar } from './components/layout/Sidebar';
 import { Dashboard } from './pages/Dashboard';
 import { Permissions } from './pages/Permissions';
@@ -88,10 +88,16 @@ function LoginPage() {
 export default function App() {
   const { isAuthenticated, isLoading, getAccessTokenSilently } = useAuth0();
 
-  // Set up the API client's token getter
+  // Set up the API client's token getter, then immediately seed the user in the DB
   useEffect(() => {
     if (isAuthenticated) {
       setTokenGetter(getAccessTokenSilently);
+      // Call /auth/me to find-or-create the user record in our DB.
+      // Without this, routes like /connections return 404 "User not found"
+      // because the user row only gets created when /auth/me is hit.
+      apiClient.get('/auth/me').catch((err) => {
+        console.warn('Failed to seed user profile:', err?.response?.data ?? err.message);
+      });
     }
   }, [isAuthenticated, getAccessTokenSilently]);
 
