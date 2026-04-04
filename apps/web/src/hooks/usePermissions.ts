@@ -30,5 +30,15 @@ export function usePermissions() {
     },
   });
 
-  return { permissions: permissions || [], isLoading, updatePermission, bulkUpdate };
+  const resetService = useMutation({
+    mutationFn: async (service: string) => {
+      await apiClient.delete(`/permissions/${service}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['permissions'] });
+    },
+  });
+
+  return { permissions: permissions || [], isLoading, updatePermission, bulkUpdate, resetService };
 }
+
