@@ -6,6 +6,7 @@ const GUARDIAN_API = process.env.GUARDIAN_API_URL || 'http://localhost:3001';
 type ApprovalStatus =
   | 'PENDING_APPROVAL'
   | 'APPROVED'
+  | 'STEP_UP_VERIFIED'
   | 'DENIED'
   | 'EXPIRED'
   | 'EXECUTED';

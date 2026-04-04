@@ -1,16 +1,46 @@
 import { useAuth0 } from '@auth0/auth0-react';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiClient, setTokenGetter } from '../api/client';
 
 export function Callback() {
-  const { isAuthenticated, isLoading, error } = useAuth0();
+  const { isAuthenticated, isLoading, error, getAccessTokenSilently } = useAuth0();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
+    if (isLoading || !isAuthenticated) {
+      return;
+    }
+
+    setTokenGetter(getAccessTokenSilently);
+
+    const url = new URL(window.location.href);
+    const rawState = url.searchParams.get('state');
+    if (!rawState) {
+      navigate('/');
+      return;
+    }
+
+    try {
+      const parsedState = JSON.parse(decodeURIComponent(rawState));
+      if (!parsedState?.stepUp || !parsedState?.jobId) {
+        navigate('/');
+        return;
+      }
+
+      apiClient.post(`/agent/action/${parsedState.jobId}/step-up`)
+        .then(() => {
+          navigate('/');
+        })
+        .catch((err) => {
+          console.error('Failed to complete step-up action:', err?.response?.data ?? err.message);
+          navigate('/');
+        });
+    } catch (parseError) {
+      console.error('Failed to parse callback state:', parseError);
       navigate('/');
     }
-  }, [isLoading, isAuthenticated, navigate]);
+  }, [isLoading, isAuthenticated, navigate, getAccessTokenSilently]);
 
   if (error) {
     return (

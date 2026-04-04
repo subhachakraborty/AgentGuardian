@@ -41,6 +41,13 @@ export async function executeGithubAction(
       return { success: true, data, metadata: { filePath: path } };
     }
 
+    case 'github.read_branches': {
+      const res = await fetch(`${GITHUB_API}/repos/${owner}/${repo}/branches?per_page=100`, { headers });
+      if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
+      const data: any = await res.json();
+      return { success: true, data, metadata: { branchCount: data.length } };
+    }
+
     case 'github.create_issue': {
       const res = await fetch(`${GITHUB_API}/repos/${owner}/${repo}/issues`, {
         method: 'POST', headers,

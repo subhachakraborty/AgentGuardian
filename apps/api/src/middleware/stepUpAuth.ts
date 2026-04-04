@@ -25,6 +25,7 @@ export function requireStepUp(req: Request, res: Response, next: NextFunction) {
 function generateChallengeUrl(req: Request): string {
   const jobId = req.params.jobId || '';
   return `https://${env.AUTH0_DOMAIN}/authorize?` +
+    `client_id=${encodeURIComponent(env.AUTH0_CLIENT_ID)}&` +
     `audience=${encodeURIComponent(env.AUTH0_AUDIENCE)}&` +
     `scope=openid&` +
     `acr_values=${encodeURIComponent(MFA_ACR)}&` +

@@ -6,7 +6,8 @@ import { waitForApproval } from './guardian/waitForApproval';
 
 const GUARDIAN_API = process.env.GUARDIAN_API_URL || 'http://localhost:3001';
 const DEMO_GITHUB_OWNER = process.env.DEMO_GITHUB_OWNER || 'subhachakraborty';
-const DEMO_GITHUB_REPO = process.env.DEMO_GITHUB_REPO || 'AgentGuardian';
+const DEMO_GITHUB_REPO = process.env.DEMO_GITHUB_REPO || 'Test';
+const DEMO_GITHUB_BRANCH = process.env.DEMO_GITHUB_BRANCH || 'test-branch';
 
 interface ActionResult {
   tier: string;
@@ -23,6 +24,10 @@ interface GithubIssueLike {
   number: number;
   title: string;
   html_url?: string;
+}
+
+interface GithubBranch {
+  name: string;
 }
 
 async function submitAction(
@@ -64,61 +69,54 @@ function ensureExecuted(stepName: string, result: ActionResult) {
   }
 }
 
-function printIssueLikeSummary(label: string, data: unknown) {
-  const items = Array.isArray(data) ? (data as GithubIssueLike[]) : [];
-  console.log(`   → ${label}: ${items.length}`);
-
-  const preview = items.slice(0, 3);
-  for (const item of preview) {
-    console.log(`     #${item.number} ${item.title}`);
+function printBranchSummary(label: string, data: unknown) {
+  const branches = Array.isArray(data) ? (data as GithubBranch[]) : [];
+  console.log(`   → ${label}: ${branches.length}`);
+  for (const branch of branches.slice(0, 10)) {
+    console.log(`     ${branch.name}`);
   }
 }
 
-function buildDemoIssue() {
-  const timestamp = new Date().toISOString();
-  return {
-    title: `[Agent Guardian Demo] NUDGE issue ${timestamp}`,
-    body: [
-      'This issue was requested by the Agent Guardian demo agent.',
-      '',
-      `Created at: ${timestamp}`,
-      `Repo: ${DEMO_GITHUB_OWNER}/${DEMO_GITHUB_REPO}`,
-      '',
-      'This action should require human approval before execution.',
-    ].join('\n'),
-  };
+function hasBranch(data: unknown, branchName: string) {
+  const branches = Array.isArray(data) ? (data as GithubBranch[]) : [];
+  return branches.some((branch) => branch.name === branchName);
 }
 
-function findCreatedIssue(data: unknown, title: string) {
-  const items = Array.isArray(data) ? (data as GithubIssueLike[]) : [];
-  return items.find((item) => item.title === title);
-}
-
-async function waitForCreatedIssue(token: string, title: string, timeoutMs: number = 15000) {
+async function waitForBranchDeletion(token: string, branchName: string, timeoutMs: number = 15000) {
   const deadline = Date.now() + timeoutMs;
 
   while (Date.now() < deadline) {
-    const issues = await submitAction(token, {
+    const branches = await submitAction(token, {
       service: 'github',
-      actionType: 'github.read_issues',
+      actionType: 'github.read_branches',
       payload: {
         owner: DEMO_GITHUB_OWNER,
         repo: DEMO_GITHUB_REPO,
       },
-      displaySummary: `Read open issues from ${DEMO_GITHUB_OWNER}/${DEMO_GITHUB_REPO} after nudge approval`,
+      displaySummary: `Read branches from ${DEMO_GITHUB_OWNER}/${DEMO_GITHUB_REPO} after step-up verification`,
     });
 
-    if (issues.status === 'EXECUTED') {
-      const createdIssue = findCreatedIssue(issues.data, title);
-      if (createdIssue) {
-        return { issues, createdIssue };
+    if (branches.status === 'EXECUTED' && !hasBranch(branches.data, branchName)) {
+      return branches;
       }
-    }
 
     await new Promise((resolve) => setTimeout(resolve, 2000));
   }
 
   return null;
+}
+
+async function waitForStepUpResolution(token: string, jobId: string, timeoutMs: number = 5 * 60 * 1000) {
+  const result = await waitForApproval(jobId, token, timeoutMs);
+
+  // In the current backend flow, STEP_UP jobs may briefly surface as APPROVED
+  // before the downstream delete operation becomes observable. Treat that as
+  // a valid continuation state and verify via the actual branch list next.
+  if (result.status === 'APPROVED' || result.status === 'STEP_UP_VERIFIED') {
+    return result;
+  }
+
+  return result;
 }
 
 // ─── Demo: "Prep My Week" Task ──────────────────────────
@@ -135,65 +133,63 @@ async function runDemoTask() {
     );
   }
 
-  const beforeIssues = await submitAction(token, {
+  const beforeBranches = await submitAction(token, {
     service: 'github',
-    actionType: 'github.read_issues',
+    actionType: 'github.read_branches',
     payload: {
       owner: DEMO_GITHUB_OWNER,
       repo: DEMO_GITHUB_REPO,
     },
-    displaySummary: `Read open issues from ${DEMO_GITHUB_OWNER}/${DEMO_GITHUB_REPO} before nudge test`,
+    displaySummary: `Read branches from ${DEMO_GITHUB_OWNER}/${DEMO_GITHUB_REPO} before step-up test`,
   });
-  printActionStatus('📋 Step 1: Read open issues before NUDGE action', beforeIssues);
-  ensureExecuted('Step 1', beforeIssues);
-  printIssueLikeSummary('Open issues before request', beforeIssues.data);
+  printActionStatus('🌿 Step 1: Read branches before STEP-UP action', beforeBranches);
+  ensureExecuted('Step 1', beforeBranches);
+  printBranchSummary('Branches before request', beforeBranches.data);
 
-  const demoIssue = buildDemoIssue();
-  console.log('');
-  console.log('🟡 Step 2: Request issue creation (NUDGE)');
-  console.log(`   → Title: ${demoIssue.title}`);
-
-  const createIssue = await submitAction(token, {
-    service: 'github',
-    actionType: 'github.create_issue',
-    payload: {
-      owner: DEMO_GITHUB_OWNER,
-      repo: DEMO_GITHUB_REPO,
-      title: demoIssue.title,
-      body: demoIssue.body,
-    },
-    displaySummary: `Create demo issue in ${DEMO_GITHUB_OWNER}/${DEMO_GITHUB_REPO}`,
-  });
-  printActionStatus('📝 NUDGE request submitted', createIssue);
-
-  if (createIssue.status !== 'PENDING_APPROVAL' || !createIssue.jobId) {
-    throw new Error('Expected github.create_issue to return PENDING_APPROVAL with a jobId');
+  if (!hasBranch(beforeBranches.data, DEMO_GITHUB_BRANCH)) {
+    throw new Error(`Branch '${DEMO_GITHUB_BRANCH}' was not found before deletion test`);
   }
 
-  console.log(`   → Approve this action from the dashboard within 60 seconds (job: ${createIssue.jobId})`);
-  const approval = await waitForApproval(createIssue.jobId, token);
-  console.log(`   → Approval result: ${approval.status}`);
+  console.log('');
+  console.log(`🔴 Step 2: Request branch deletion (${DEMO_GITHUB_BRANCH})`);
 
-  if (approval.status !== 'APPROVED') {
-    console.log('\n⚠️ Issue was not created.');
+  const deleteBranch = await submitAction(token, {
+    service: 'github',
+    actionType: 'github.delete_branch',
+    payload: {
+      owner: DEMO_GITHUB_OWNER,
+      repo: DEMO_GITHUB_REPO,
+      branch: DEMO_GITHUB_BRANCH,
+    },
+    displaySummary: `Delete branch ${DEMO_GITHUB_BRANCH} in ${DEMO_GITHUB_OWNER}/${DEMO_GITHUB_REPO}`,
+  });
+  printActionStatus('🗑️ STEP-UP request submitted', deleteBranch);
+
+  if (deleteBranch.status !== 'AWAITING_MFA' || !deleteBranch.jobId || !deleteBranch.challengeUrl) {
+    throw new Error('Expected github.delete_branch to return AWAITING_MFA with a jobId and challengeUrl');
+  }
+
+  console.log('   → Complete MFA from the dashboard modal, or open this URL manually:');
+  console.log(`   → ${deleteBranch.challengeUrl}`);
+  const approval = await waitForStepUpResolution(deleteBranch.jobId, token, 5 * 60 * 1000);
+  console.log(`   → Step-up result: ${approval.status}`);
+
+  if (approval.status !== 'APPROVED' && approval.status !== 'STEP_UP_VERIFIED') {
+    console.log('\n⚠️ Branch was not deleted.');
     console.log('═'.repeat(50));
     return;
   }
 
-  const verification = await waitForCreatedIssue(token, demoIssue.title);
-  if (!verification) {
-    throw new Error('Approval succeeded but the demo issue was not found after waiting for GitHub to reflect the change');
+  const afterBranches = await waitForBranchDeletion(token, DEMO_GITHUB_BRANCH);
+  if (!afterBranches) {
+    throw new Error(`Step-up succeeded but branch '${DEMO_GITHUB_BRANCH}' still appears in the branch list`);
   }
 
-  const { issues: afterIssues, createdIssue } = verification;
   console.log('');
-  printActionStatus('✅ Step 3: Verify created issue', afterIssues);
-  ensureExecuted('Step 3', afterIssues);
-
-  console.log(`   → Created issue: #${createdIssue.number} ${createdIssue.title}`);
-  if (createdIssue.html_url) {
-    console.log(`   → URL: ${createdIssue.html_url}`);
-  }
+  printActionStatus('✅ Step 3: Verify branch deletion', afterBranches);
+  ensureExecuted('Step 3', afterBranches);
+  printBranchSummary('Branches after deletion', afterBranches.data);
+  console.log(`   → Deleted branch: ${DEMO_GITHUB_BRANCH}`);
 
   console.log('\n✅ Demo task complete!');
   console.log('═'.repeat(50));

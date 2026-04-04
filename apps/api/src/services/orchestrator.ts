@@ -195,6 +195,7 @@ async function handleStepUpTier(
 
   // Generate challenge URL
   const challengeUrl = `https://${env.AUTH0_DOMAIN}/authorize?` +
+    `client_id=${encodeURIComponent(env.AUTH0_CLIENT_ID)}&` +
     `audience=${encodeURIComponent(env.AUTH0_AUDIENCE)}&` +
     `scope=openid&` +
     `acr_values=${encodeURIComponent('http://schemas.openid.net/pape/policies/2007/06/multi-factor')}&` +

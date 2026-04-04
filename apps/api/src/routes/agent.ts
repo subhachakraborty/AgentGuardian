@@ -131,7 +131,7 @@ router.get('/action/:jobId/status', requireAuth, async (req: Request, res: Respo
     }
 
     res.json({
-      status: pending.status,
+      status: pending.stepUpVerified ? 'STEP_UP_VERIFIED' : pending.status,
       jobId: pending.id,
       expiresAt: pending.expiresAt.toISOString(),
       resolvedAt: pending.resolvedAt?.toISOString(),

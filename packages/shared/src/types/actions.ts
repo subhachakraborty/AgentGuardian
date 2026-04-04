@@ -27,6 +27,7 @@ export type ActionResponseStatus =
   | 'EXECUTED'
   | 'PENDING_APPROVAL'
   | 'AWAITING_MFA'
+  | 'STEP_UP_VERIFIED'
   | 'DENIED'
   | 'EXPIRED'
   | 'FAILED';
