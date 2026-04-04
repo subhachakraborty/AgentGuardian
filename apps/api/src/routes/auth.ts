@@ -31,30 +31,35 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
     if (!user) {
       // Extract info from JWT claims
       const payload = (req as any).auth?.payload;
-      user = await prisma.user.create({
+      const created = await prisma.user.create({
         data: {
           auth0UserId,
           email: payload?.email || payload?.[`https://agentguardian.com/email`] || `${auth0UserId}@auth0.user`,
           displayName: payload?.name || payload?.nickname || null,
           avatarUrl: payload?.picture || null,
         },
+      });
+      logger.info('New user created from Auth0', { userId: created.id, auth0UserId });
+
+      // Re-fetch with includes so the response shape is consistent
+      user = await prisma.user.findUnique({
+        where: { auth0UserId },
         include: {
           connections: { where: { status: 'ACTIVE' } },
           _count: { select: { auditLogs: true, pendingActions: true } },
         },
       });
-      logger.info('New user created from Auth0', { userId: user.id, auth0UserId });
     }
 
     res.json({
-      id: user.id,
-      auth0UserId: user.auth0UserId,
-      email: user.email,
-      displayName: user.displayName,
-      avatarUrl: user.avatarUrl,
-      connections: user.connections,
-      stats: user._count,
-      createdAt: user.createdAt,
+      id: user!.id,
+      auth0UserId: user!.auth0UserId,
+      email: user!.email,
+      displayName: user!.displayName,
+      avatarUrl: user!.avatarUrl,
+      connections: user!.connections ?? [],
+      stats: user!._count ?? { auditLogs: 0, pendingActions: 0 },
+      createdAt: user!.createdAt,
     });
   } catch (err: any) {
     logger.error('Error in /auth/me', { error: err.message });

@@ -24,6 +24,7 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+// app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(requestLogger);
 app.use(generalLimiter);
@@ -33,7 +34,7 @@ app.set('trust proxy', 1);
 
 // ─── Routes ─────────────────────────────────────────────
 // Health check (no auth prefix)
-app.use('/api/v1', authRoutes);
+// app.use('/api/v1', authRoutes);
 
 // Authenticated routes
 app.use('/api/v1/auth', authRoutes);
