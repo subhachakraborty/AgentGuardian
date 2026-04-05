@@ -2,6 +2,7 @@
 // Simulates an AI agent using Agent Guardian's action pipeline
 
 import { getAgentToken } from './auth/getAgentToken';
+import { resolveActingUser } from './auth/resolveActingUser';
 import { waitForApproval } from './guardian/waitForApproval';
 
 const GUARDIAN_API = process.env.GUARDIAN_API_URL || 'http://localhost:3001';
@@ -32,24 +33,22 @@ interface GithubBranch {
 
 async function submitAction(
   token: string,
+  actingAuth0UserId: string,
   action: { service: string; actionType: string; payload?: any; displaySummary: string }
 ): Promise<ActionResult> {
-  const actingUserEmail = process.env.AGENT_ACTING_USER_EMAIL;
-  const actingAuth0UserId = process.env.AGENT_ACTING_AUTH0_USER_ID;
   const resp = await fetch(`${GUARDIAN_API}/api/v1/agent/action`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
-      ...(actingUserEmail ? { 'x-agent-user-email': actingUserEmail } : {}),
-      ...(actingAuth0UserId ? { 'x-agent-auth0-user-id': actingAuth0UserId } : {}),
+      'x-agent-auth0-user-id': actingAuth0UserId,
     },
     body: JSON.stringify(action),
   });
 
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({}));
-    throw new Error(`Action failed (${resp.status}): ${err.message || resp.statusText}`);
+    throw new Error(`Action failed (${resp.status}): ${(err as any).message || resp.statusText}`);
   }
 
   return resp.json();
@@ -82,11 +81,16 @@ function hasBranch(data: unknown, branchName: string) {
   return branches.some((branch) => branch.name === branchName);
 }
 
-async function waitForBranchDeletion(token: string, branchName: string, timeoutMs: number = 15000) {
+async function waitForBranchDeletion(
+  token: string,
+  actingAuth0UserId: string,
+  branchName: string,
+  timeoutMs: number = 15000
+) {
   const deadline = Date.now() + timeoutMs;
 
   while (Date.now() < deadline) {
-    const branches = await submitAction(token, {
+    const branches = await submitAction(token, actingAuth0UserId, {
       service: 'github',
       actionType: 'github.read_branches',
       payload: {
@@ -127,13 +131,15 @@ async function runDemoTask() {
 
   const token = await getAgentToken();
 
-  if (!process.env.AGENT_ACTING_USER_EMAIL && !process.env.AGENT_ACTING_AUTH0_USER_ID) {
-    throw new Error(
-      'Set AGENT_ACTING_USER_EMAIL or AGENT_ACTING_AUTH0_USER_ID in agent/.env so the demo agent acts as the same connected dashboard user.'
-    );
-  }
+  // Dynamically resolve the acting user — no hardcoded ID needed in .env
+  const actingUser = await resolveActingUser(token);
+  console.log(`👤 Acting as: ${actingUser.email} (${actingUser.auth0UserId})\n`);
 
-  const beforeBranches = await submitAction(token, {
+  // Convenience wrapper that always carries the resolved user ID
+  const act = (action: Parameters<typeof submitAction>[2]) =>
+    submitAction(token, actingUser.auth0UserId, action);
+
+  const beforeBranches = await act({
     service: 'github',
     actionType: 'github.read_branches',
     payload: {
@@ -153,7 +159,7 @@ async function runDemoTask() {
   console.log('');
   console.log(`🔴 Step 2: Request branch deletion (${DEMO_GITHUB_BRANCH})`);
 
-  const deleteBranch = await submitAction(token, {
+  const deleteBranch = await act({
     service: 'github',
     actionType: 'github.delete_branch',
     payload: {
@@ -180,7 +186,7 @@ async function runDemoTask() {
     return;
   }
 
-  const afterBranches = await waitForBranchDeletion(token, DEMO_GITHUB_BRANCH);
+  const afterBranches = await waitForBranchDeletion(token, actingUser.auth0UserId, DEMO_GITHUB_BRANCH);
   if (!afterBranches) {
     throw new Error(`Step-up succeeded but branch '${DEMO_GITHUB_BRANCH}' still appears in the branch list`);
   }
