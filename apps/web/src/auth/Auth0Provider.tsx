@@ -15,7 +15,11 @@ export function Auth0ProviderWithNavigate({ children }: Props) {
   const redirectUri = import.meta.env.VITE_AUTH0_REDIRECT_URI || window.location.origin + '/callback';
 
   const onRedirectCallback = (appState: any) => {
-    navigate(appState?.returnTo || '/');
+    if (appState?.stepUp && appState?.jobId) {
+      navigate(`/step-up-complete?jobId=${appState.jobId}`);
+    } else {
+      navigate(appState?.returnTo || '/');
+    }
   };
 
   if (!domain || !clientId) {

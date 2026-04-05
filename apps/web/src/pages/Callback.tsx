@@ -13,34 +13,7 @@ export function Callback() {
     }
 
     setTokenGetter(getAccessTokenSilently);
-
-    const url = new URL(window.location.href);
-    const rawState = url.searchParams.get('state');
-    if (!rawState) {
-      navigate('/');
-      return;
-    }
-
-    try {
-      const parsedState = JSON.parse(decodeURIComponent(rawState));
-      if (!parsedState?.stepUp || !parsedState?.jobId) {
-        navigate('/');
-        return;
-      }
-
-      apiClient.post(`/agent/action/${parsedState.jobId}/step-up`)
-        .then(() => {
-          navigate('/');
-        })
-        .catch((err) => {
-          console.error('Failed to complete step-up action:', err?.response?.data ?? err.message);
-          navigate('/');
-        });
-    } catch (parseError) {
-      console.error('Failed to parse callback state:', parseError);
-      navigate('/');
-    }
-  }, [isLoading, isAuthenticated, navigate, getAccessTokenSilently]);
+  }, [isLoading, isAuthenticated, getAccessTokenSilently]);
 
   if (error) {
     return (

@@ -204,15 +204,8 @@ async function handleStepUpTier(
     );
   }
 
-  // Generate challenge URL
-  const challengeUrl = `https://${env.AUTH0_DOMAIN}/authorize?` +
-    `client_id=${encodeURIComponent(env.AUTH0_CLIENT_ID)}&` +
-    `audience=${encodeURIComponent(env.AUTH0_AUDIENCE)}&` +
-    `scope=openid&` +
-    `acr_values=${encodeURIComponent('http://schemas.openid.net/pape/policies/2007/06/multi-factor')}&` +
-    `response_type=code&` +
-    `redirect_uri=${encodeURIComponent(env.FRONTEND_URL + '/callback')}&` +
-    `state=${encodeURIComponent(JSON.stringify({ stepUp: true, jobId: pendingAction.id }))}`;
+  // Generate challenge URL pointing to the dashboard SPA
+  const challengeUrl = `${env.FRONTEND_URL}/step-up?jobId=${pendingAction.id}`;
 
   // Emit step-up required event
   emitStepUpRequired(userId, pendingAction.id, challengeUrl);

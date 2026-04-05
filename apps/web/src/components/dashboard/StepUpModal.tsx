@@ -1,4 +1,5 @@
 import { useActivityStore } from '../../stores/activityStore';
+import { useAuth0 } from '@auth0/auth0-react';
 import { ShieldAlert, X, Fingerprint } from 'lucide-react';
 
 export function StepUpModal() {
@@ -6,9 +7,15 @@ export function StepUpModal() {
 
   if (!stepUpModal) return null;
 
+  const { loginWithRedirect } = useAuth0();
+
   const handleMFA = () => {
-    // Redirect to Auth0 step-up auth
-    window.location.href = stepUpModal.challengeUrl;
+    loginWithRedirect({
+      appState: { stepUp: true, jobId: stepUpModal.jobId },
+      authorizationParams: {
+        acr_values: 'http://schemas.openid.net/pape/policies/2007/06/multi-factor'
+      }
+    });
   };
 
   const handleCancel = () => {

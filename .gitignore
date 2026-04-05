@@ -42,3 +42,4 @@ redisdata/
 !README.md
 *.tsbuildinfo
 .codex
+debug-token.json
