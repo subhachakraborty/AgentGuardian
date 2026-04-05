@@ -40,6 +40,7 @@ redisdata/
 #Others
 *.md
 !README.md
+!AgentGuardian_DeveloperDocs_v1.2.md
 *.tsbuildinfo
 .codex
 debug-token.json
