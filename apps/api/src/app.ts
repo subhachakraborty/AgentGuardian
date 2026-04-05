@@ -22,7 +22,7 @@ app.use(cors({
   origin: env.FRONTEND_URL,
   credentials: false,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-id-token'],
 }));
 // app.use(cors());
 app.use(express.json({ limit: '10mb' }));

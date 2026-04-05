@@ -8,6 +8,8 @@ import { Permissions } from './pages/Permissions';
 import { Connections } from './pages/Connections';
 import { AuditLog } from './pages/AuditLog';
 import { Callback } from './pages/Callback';
+import { StepUpTrigger } from './pages/StepUpTrigger';
+import { StepUpComplete } from './pages/StepUpComplete';
 import { Shield, ArrowRight } from 'lucide-react';
 
 function ProtectedLayout() {
@@ -115,6 +117,8 @@ export default function App() {
   return (
     <Routes>
       <Route path="/callback" element={<Callback />} />
+      <Route path="/step-up" element={<StepUpTrigger />} />
+      <Route path="/step-up-complete" element={<StepUpComplete />} />
       {isAuthenticated ? (
         <Route path="/*" element={<ProtectedLayout />} />
       ) : (

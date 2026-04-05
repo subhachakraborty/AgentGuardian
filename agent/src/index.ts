@@ -6,7 +6,7 @@ import { resolveActingUser } from './auth/resolveActingUser';
 import { waitForApproval } from './guardian/waitForApproval';
 
 const GUARDIAN_API = process.env.GUARDIAN_API_URL || 'http://localhost:3001';
-const DEMO_GITHUB_OWNER = process.env.DEMO_GITHUB_OWNER || 'Vikk-17';
+const DEMO_GITHUB_OWNER = process.env.DEMO_GITHUB_OWNER || 'chakraborty0000';
 const DEMO_GITHUB_REPO = process.env.DEMO_GITHUB_REPO || 'Test';
 const DEMO_GITHUB_BRANCH = process.env.DEMO_GITHUB_BRANCH || 'test-branch';
 
