@@ -1,6 +1,6 @@
 // src/routes/agent.ts — Agent Action Routes (Section 6.4)
 import { Router, Request, Response } from 'express';
-import { requireAuth } from '../middleware/auth';
+import { requireAuth, requireScope } from '../middleware/auth';
 import { requireAgentAuth, getActingUserId, getAgentId } from '../middleware/agentAuth';
 import { requireStepUp } from '../middleware/stepUpAuth';
 import { agentActionLimiter } from '../middleware/rateLimit';
@@ -241,5 +241,55 @@ router.post(
     }
   }
 );
+// GET /api/v1/agent/whoami — Resolve which user the agent is acting on behalf of.
+// In production the userId claim is baked into the M2M token.
+// In development it auto-discovers the first GitHub-connected user so the agent
+// doesn't need AGENT_ACTING_AUTH0_USER_ID hardcoded in .env.
+router.get('/whoami', requireAuth, requireScope('agent:act'), async (req: Request, res: Response) => {
+  try {
+    const payload = (req as any).auth?.payload;
+    const actingUserId = payload?.['https://agentguardian.com/userId'] as string | undefined;
+
+    if (actingUserId) {
+      const user = await prisma.user.findUnique({ where: { auth0UserId: actingUserId } });
+      if (user) {
+        return res.json({
+          auth0UserId: user.auth0UserId,
+          email: user.email,
+          name: user.displayName,
+        });
+      }
+    }
+
+    // Dev fallback: find first user who has a GitHub service token
+    if (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
+      const githubUser = await prisma.user.findFirst({
+        where: {
+          connections: { some: { service: 'GITHUB' } },
+        },
+        orderBy: { updatedAt: 'desc' },
+      });
+
+      if (githubUser) {
+        logger.info('whoami: auto-resolved to first GitHub-connected user', {
+          auth0UserId: githubUser.auth0UserId,
+        });
+        return res.json({
+          auth0UserId: githubUser.auth0UserId,
+          email: githubUser.email,
+          name: githubUser.displayName,
+        });
+      }
+    }
+
+    return res.status(404).json({
+      error: 'no_acting_user',
+      message: 'Cannot determine acting user. Connect a GitHub account via the dashboard first.',
+    });
+  } catch (err: any) {
+    logger.error('whoami error', { error: err.message });
+    res.status(500).json({ error: 'internal_error', message: err.message });
+  }
+});
 
 export default router;

@@ -11,7 +11,7 @@ const serviceIcons: Record<string, { icon: typeof Mail; name: string; color: str
 };
 
 export function Permissions() {
-  const { permissions, isLoading, updatePermission } = usePermissions();
+  const { permissions, isLoading, updatePermission, resetService } = usePermissions();
 
   const handleTierChange = (service: string, actionType: string, tier: string) => {
     updatePermission.mutate({ service, actionType, tier });
@@ -64,8 +64,12 @@ export function Permissions() {
                       {perms.length} actions
                     </span>
                   </div>
-                  <button className="btn-ghost !text-xs !py-1 !px-3">
-                    <RotateCcw className="w-3 h-3" />
+                  <button
+                    className="btn-ghost !text-xs !py-1 !px-3 disabled:opacity-50"
+                    onClick={() => resetService.mutate(service)}
+                    disabled={resetService.isPending}
+                  >
+                    <RotateCcw className={`w-3 h-3 ${resetService.isPending ? 'animate-spin' : ''}`} />
                     Reset to defaults
                   </button>
                 </div>

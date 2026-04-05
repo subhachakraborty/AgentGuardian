@@ -159,4 +159,26 @@ router.get('/defaults', requireAuth, (_req: Request, res: Response) => {
   res.json(defaults);
 });
 
+// DELETE /api/v1/permissions/:service — Reset a service's permissions to system defaults
+router.delete('/:service', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const auth0UserId = getUserId(req);
+    if (!auth0UserId) return res.status(401).json({ error: 'No user ID' });
+
+    const user = await prisma.user.findUnique({ where: { auth0UserId } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const serviceUpper = req.params.service.toUpperCase() as any;
+
+    const { count } = await prisma.permissionConfig.deleteMany({
+      where: { userId: user.id, service: serviceUpper },
+    });
+
+    logger.info('Permissions reset to defaults', { userId: user.id, service: serviceUpper, deleted: count });
+    res.json({ reset: true, service: serviceUpper, deleted: count });
+  } catch (err: any) {
+    res.status(500).json({ error: 'internal_error', message: err.message });
+  }
+});
+
 export default router;

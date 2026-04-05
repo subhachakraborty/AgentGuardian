@@ -49,6 +49,12 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
           _count: { select: { auditLogs: true, pendingActions: true } },
         },
       });
+    } else {
+      // Touch updatedAt to mark this user as the currently active one
+      await prisma.user.update({
+        where: { auth0UserId },
+        data: { updatedAt: new Date() },
+      });
     }
 
     res.json({
