@@ -36,12 +36,12 @@ export async function createNudgeAction(params: CreateNudgeParams) {
     },
   });
 
-  // Store payload in Redis with 70s TTL (60s veto window + buffer)
+  // Store payload in Redis with 3min TTL (60s approval window + execution buffer)
   // Await this write so an approval cannot race ahead of payload persistence.
   if (params.payload && Object.keys(params.payload).length > 0) {
     await redis.setex(
       `nudge:payload:${pendingAction.id}`,
-      70,
+      180,
       JSON.stringify(params.payload)
     );
   }
