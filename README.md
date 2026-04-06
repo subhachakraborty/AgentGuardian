@@ -77,10 +77,11 @@ cp agent/.env.example agent/.env
 
 Fill in at minimum:
 
-- **Auth0** values in `apps/api/.env` and `apps/web/.env` (domain, audience, client IDs, M2M secrets as documented in `.env.example`)
-- **Agent M2M** credentials and `OPENROUTER_API_KEY` in `agent/.env`
+- **API** (`apps/api/.env`): Auth0 domain, audience, client IDs, M2M secrets, database URL, Redis URL
+- **Web** (`apps/web/.env`): Only the `VITE_*` variables (Auth0 SPA client, API URLs)
+- **Agent** (`agent/.env`): Agent M2M credentials and `OPENROUTER_API_KEY`
 
-The root `/.env.example` lists API, web, and shared variables in one place; web vars are the `VITE_*` entries.
+The root `/.env.example` contains both API and web variables. When copying to `apps/web/.env`, you only need to configure the `VITE_*` entries.
 
 ### 4. Prepare the database
 
