@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { TopNav } from '../components/layout/TopNav';
 import { useConnections } from '../hooks/useConnections';
 import { ServiceCard } from '../components/connections/ServiceCard';
@@ -5,6 +6,7 @@ import { Shield } from 'lucide-react';
 
 export function Connections() {
   const { connections, isLoading, connectService, revokeService } = useConnections();
+  const [connectingService, setConnectingService] = useState<string | null>(null);
 
   if (isLoading) {
     return (
@@ -56,13 +58,18 @@ export function Connections() {
               status={conn.status}
               connectedAt={conn.connectedAt}
               lastUsedAt={conn.lastUsedAt}
-              onConnect={() => connectService.mutate(conn.service.toLowerCase())}
+              onConnect={() => {
+                setConnectingService(conn.service);
+                connectService.mutate(conn.service.toLowerCase(), {
+                  onSettled: () => setConnectingService(null),
+                });
+              }}
               onRevoke={() => {
                 if (confirm(`Revoke ${conn.service} access? The agent will immediately lose access.`)) {
                   revokeService.mutate(conn.service.toLowerCase());
                 }
               }}
-              isConnecting={connectService.isPending}
+              isConnecting={connectingService === conn.service}
             />
           ))}
         </div>
